@@ -3,6 +3,7 @@ on:
   pull_request:
     types:
       - synchronize
+      - labeled
   push:
     branches: [develop, master]
 
