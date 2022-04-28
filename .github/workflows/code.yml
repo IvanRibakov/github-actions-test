@@ -8,6 +8,7 @@ on:
 
 jobs:
   code:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'Code') }}
     runs-on: ubuntu-latest
     steps:
       - name: Code checks placeholder

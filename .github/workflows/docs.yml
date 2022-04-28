@@ -8,6 +8,7 @@ on:
 
 jobs:
   code:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'Docs') }}
     runs-on: ubuntu-latest
     steps:
       - name: Docs build placeholder
