@@ -9,7 +9,7 @@ on:
 
 jobs:
   code:
-    if: ${{ (github.event.push != null) || contains(github.event.pull_request.labels.*.name, 'Code') }}
+    if: (github.event_name == 'push') || contains(github.event.pull_request.labels.*.name, 'Code')
     runs-on: ubuntu-latest
     steps:
       - name: Code checks placeholder

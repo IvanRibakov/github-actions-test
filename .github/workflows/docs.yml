@@ -9,7 +9,7 @@ on:
 
 jobs:
   code:
-    if: ${{ (github.event.push != null) || contains(github.event.pull_request.labels.*.name, 'Docs') }}
+    if: (github.event_name == 'push') || contains(github.event.pull_request.labels.*.name, 'Docs')
     runs-on: ubuntu-latest
     steps:
       - name: Docs build placeholder
