@@ -1,0 +1,14 @@
+name: Documentation
+on: 
+  pull_request:
+    types:
+      - synchronize
+  push:
+    branches: [develop, master]
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Docs build placeholder
+        run: echo "TODO - build and validate docs, create unpackaged asset for easy inspection"

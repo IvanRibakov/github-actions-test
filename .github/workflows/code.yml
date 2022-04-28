@@ -1,0 +1,14 @@
+name: Code checks
+on: 
+  pull_request:
+    types:
+      - synchronize
+  push:
+    branches: [develop, master]
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code checks placeholder
+        run: echo "TODO - more code checks to go here (static, unit-tests)"
