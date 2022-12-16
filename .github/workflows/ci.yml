@@ -1,0 +1,23 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [develop, master]
+  workflow_run:
+    workflows: [Clean]
+    types: [completed]
+    branches: [develop]
+env:
+  GITHUB_USERNAME: ${{ github.actor }}
+  GITHUB_GHCR_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+
+  jiraprocs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/upload-artifact@v3
+        with:
+          name: jiraprocs
+          path: jiraprocs/main.go

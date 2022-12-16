@@ -1,0 +1,162 @@
+name: Pre-release (shared)
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Which version to release
+        type: string
+        required: true
+      version-prefix:
+        description: Which prefix to apply to the version number in order to generate release branch
+        type: string
+        required: false
+        default: ''
+      version-file:
+        description: Where to look for current version to be updated
+        type: string
+        required: true
+      version-pattern:
+        description: How to extract version from the version file. Must contain exactly one capture group
+        type: string
+        required: true
+      changelog-file:
+        description: Where to look for the project changelog
+        type: string
+        required: true
+      ref:
+        description: The branch, tag or SHA to checkout. Will be used as a base for creating release branch.
+        required: false
+        type: string
+        default: ''
+      test:
+        description: Flag to identify whether to execute workflow in the test mode.
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.ref }}
+        # IMPORTANT - without "fetch-depth: 0" devops-infra/action-pull-request fails with:
+        # Listing new commits in the source branch...
+        # fatal: remotes/origin/master...remotes/origin/release/libutils/v0.0.8: no merge base
+        fetch-depth: 0
+
+    - name: Test cleanup
+      run: |
+        git push origin --delete develop-test || true
+        git push origin --delete master-test || true
+
+    - name: Test setup
+      if: ${{ fromJSON(inputs.test) }}
+      run: |
+        git checkout -b develop-test develop && git push origin develop-test
+        git checkout -b master-test master && git push origin master-test
+
+    - name: Current branch
+      run: git rev-parse --abbrev-ref HEAD
+
+    - name: Update version
+      uses: actions/github-script@v6
+      env:
+        VERSION: ${{ inputs.version }}
+        VERSION_FILE: ${{ inputs.version-file }}
+        VERSION_PATTERN: ${{ inputs.version-pattern }}
+      with:
+        script: |
+          console.log(`Current version: ${process.env.VERSION}`);
+          console.log(`Version file: ${process.env.VERSION_FILE}`);
+          console.log(`Version pattern: ${process.env.VERSION_PATTERN}`);
+          const fs = require("fs");
+          let regex = new RegExp(process.env.VERSION_PATTERN);
+          const data = fs.readFileSync(process.env.VERSION_FILE, { encoding: 'utf8' });
+          let m = data.match(regex);
+          if (m === null) {
+              throw new Error("Unable to extract version number using supplied pattern");
+          }
+          if (m.length != 2) {
+              throw new Error("Invalid number of capture groups, must use exactly one group to identify version number");
+          }
+          let currVersion = m[1];
+          console.log(`Current Version: ${currVersion}`)
+          let newVersionString = m[0].replace(currVersion, process.env.VERSION);
+          console.log(`New version string: ${newVersionString}`)
+          let updatedData = data.replace(regex, newVersionString);
+          fs.writeFileSync(process.env.VERSION_FILE,updatedData,{encoding:'utf8',flag:'w'})
+
+    - name: Update changelog
+      uses: actions/github-script@v6
+      env:
+        VERSION: ${{ inputs.version }}
+        CHANGELOG_FILE: ${{ inputs.changelog-file }}
+      with:
+        script: |
+          const pattern = "## (\\[Unreleased\\])"
+          console.log(`Current version: ${process.env.VERSION}`);
+          console.log(`Changelog file: ${process.env.CHANGELOG_FILE}`);
+          console.log(`Changelog pattern: ${pattern}`);
+          const fs = require("fs");
+          let regex = new RegExp(pattern);
+          const data = fs.readFileSync(process.env.CHANGELOG_FILE, { encoding: 'utf8' });
+          let m = data.match(regex);
+          if (m === null) {
+              throw new Error("Unable to extract unreleased version title using supplied pattern");
+          }
+          if (m.length != 2) {
+              throw new Error("Invalid number of capture groups, must use exactly one group to identify version title");
+          }
+          let today = new Date();
+          let dd = today.getDate();
+          let mm = today.getMonth()+1;
+          let yyyy = today.getFullYear();
+          if (dd < 10) {
+              dd='0'+dd;
+          }
+          if (mm < 10) {
+              mm='0'+mm;
+          }
+          let todayStr = yyyy+'-'+mm+'-'+dd;
+          let newTitle = '[' + process.env.VERSION + '] - ' + todayStr
+          let currTitle = m[1];
+          console.log(`Current title: ${currTitle}`)
+          let newTitleString = m[0].replace(currTitle, newTitle);
+          console.log(`New title string: ${newTitleString}`)
+          updatedData = data.replace(regex, newTitleString);
+          fs.writeFileSync(process.env.CHANGELOG_FILE,updatedData,{encoding:'utf8',flag:'w'})
+
+    - name: Git status
+      run: git status
+    - name: Set full release name env
+      run: echo "NEXT_RELEASE_FULL=${{ inputs.version-prefix }}${{ inputs.version }}" >> $GITHUB_ENV
+    - name: Set release branch env
+      run: echo "RELEASE_BRANCH=release/${{ env.NEXT_RELEASE_FULL }}" >> $GITHUB_ENV
+
+    - name: Commit changes
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        branch: ${{ env.RELEASE_BRANCH }}
+        create_branch: true
+        commit_message: Prepare release ${{ env.NEXT_RELEASE_FULL }}
+
+    - name: Push new branch
+      run: git push origin ${{ env.RELEASE_BRANCH }}
+
+    - name: Create pull request into master
+      run: |
+        gh pr create \
+          --repo "$GITHUB_REPOSITORY" \
+          --title "Release ${{ env.NEXT_RELEASE_FULL }}" \
+          --body "" \
+          --base "master" \
+          --head "${{ env.RELEASE_BRANCH }}" \
+          --assignee "${{ github.actor }}" \
+          --draft \
+          --label "release" \
+          ${{ inputs.test && '--label "test"' || '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
