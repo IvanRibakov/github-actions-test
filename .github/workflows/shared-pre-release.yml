@@ -55,6 +55,7 @@ jobs:
     - name: Test setup
       if: ${{ fromJSON(inputs.test) }}
       run: |
+        git fetch --all
         git checkout -b develop-test develop && git push origin develop-test
         git checkout -b master-test master && git push origin master-test
 
