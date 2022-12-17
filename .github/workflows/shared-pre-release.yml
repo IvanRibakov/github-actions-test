@@ -55,13 +55,8 @@ jobs:
     - name: Test setup
       if: ${{ fromJSON(inputs.test) }}
       run: |
-        git branch -a
-        git branch -r
-        git fetch --all
-        git branch -a
-        git branch -r
-        git checkout -b develop-test develop && git push origin develop-test
-        git checkout -b master-test master && git push origin master-test
+        git checkout -b develop-test origin/develop && git push origin develop-test
+        git checkout -b master-test origin/master && git push origin master-test
 
     - name: Current branch
       run: git rev-parse --abbrev-ref HEAD
