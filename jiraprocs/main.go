@@ -23,7 +23,7 @@ func main() {
 	}
 	app := &cli.App{
 		Name:        "jiraprocs",
-		Version:     "2.0.0",
+		Version:     "0.0.1",
 		Compiled:    time.Now(),
 		Copyright:   "(c) 2022 Zaleos",
 		Usage:       "CLI utility for generating internal JIRA reports at Zaleos",
