@@ -150,9 +150,9 @@ jobs:
       run: |
         gh pr create \
           --repo "$GITHUB_REPOSITORY" \
-          --title "Release ${{ env.NEXT_RELEASE_FULL }}" \
+          --title "${{ inputs.test && '[TEST] ' || '' }}Release ${{ env.NEXT_RELEASE_FULL }}" \
           --body "" \
-          --base "master" \
+          --base "master${{ inputs.test && '-test' || '' }}" \
           --head "${{ env.RELEASE_BRANCH }}" \
           --assignee "${{ github.actor }}" \
           --draft \
