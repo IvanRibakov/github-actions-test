@@ -34,6 +34,10 @@ on:
         type: boolean
         default: false
 
+env:
+  NEXT_RELEASE_FULL: ${{ inputs.version-prefix }}${{ inputs.version }}
+  RELEASE_BRANCH: release/${{ inputs.version-prefix }}${{ inputs.version }}
+
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -131,10 +135,6 @@ jobs:
 
     - name: Git status
       run: git status
-    - name: Set full release name env
-      run: echo "NEXT_RELEASE_FULL=${{ inputs.version-prefix }}${{ inputs.version }}" >> $GITHUB_ENV
-    - name: Set release branch env
-      run: echo "RELEASE_BRANCH=release/${{ env.NEXT_RELEASE_FULL }}" >> $GITHUB_ENV
 
     - name: Commit changes
       uses: stefanzweifel/git-auto-commit-action@v4
