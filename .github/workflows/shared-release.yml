@@ -35,16 +35,10 @@ jobs:
   safety-checks:
     runs-on: ubuntu-latest
     steps:
-      # CHECK THAT A TAG DOES NOT ALREADY EXIST FOR THIS VERSION:
-      - uses: mukunku/tag-exists-action@v1.0.0
-        id: checkTag
-        with:
-          tag: "${{ inputs.tag }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Validate tag existance
-        if: ${{ steps.checkTag.outputs.exists == 'true' }}
-        run: exit 1 # Given tag already exists
+      - name: Check if tag already exists
+        run: |
+          git fetch --tags origin
+          git show-ref --tags --quiet --verify -- refs/tags/${{ inputs.tag }}
 
   extract-release-notes:
     needs: safety-checks
@@ -95,23 +89,6 @@ jobs:
       - download-release-assets
     runs-on: ubuntu-latest
     steps:
-      # - uses: dawidd6/action-download-artifact@v2
-      #   id: downloadArtifacts
-      #   with:
-      #     github_token: ${{secrets.GITHUB_TOKEN}}
-      #     branch: ${{ inputs.branch }}
-      #     workflow: ${{ inputs.files-from-workflow }}
-      #     workflow_conclusion: success
-      # - run: |
-      #     gh run list -R ${{ github.repository }} -b ${{ inputs.branch }} -w ${{ inputs.files-from-workflow }} --limit 5
-      #     gh run list -R ${{ github.repository }} -b ${{ inputs.branch }} -w ${{ inputs.files-from-workflow }} --limit 5 --json conclusion,databaseId
-      #     export WORKFLOW_ID=$(gh run list -R ${{ github.repository }} -b ${{ inputs.branch }} -w ${{ inputs.files-from-workflow }} --limit 1 --json conclusion,databaseId --jq '.[] | select( .conclusion == "success" ) | .databaseId')
-      #     echo "Workflow ID: $WORKFLOW_ID"
-      #     GH_DEBUG=1 gh run download $WORKFLOW_ID
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Artifacts found
-      #   run: echo "${{ steps.downloadArtifacts.outputs.artifacts }}"
       - uses: actions/download-artifact@v3
         with:
           name: release_artifacts
