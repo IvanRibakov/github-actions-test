@@ -1,0 +1,51 @@
+name: Release (New)
+on:
+  pull_request:
+    branches:
+      - master
+      - master-test
+    types:
+      - closed
+
+jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      tag: ${{ steps.step1.outputs.tag }}
+      project: ${{ steps.step1.outputs.project }}
+      version: ${{ steps.step1.outputs.version }}
+    steps:
+      - uses: actions/github-script@v6
+        id: step1
+        env:
+          HEAD_REF: ${{ github.head_ref }} # PR "from" branch name
+        with:
+          script: |
+            let tagName = process.env.HEAD_REF.replace("release/", "")
+            let releasePattern = '(.*)/v(.*)'
+            let regex = new RegExp(releasePattern);
+            let m = tagName.match(regex);
+            if (m === null) {
+                throw new Error("Unable to extract project name and version number");
+            }
+            if (m.length != 3) {
+                throw new Error("Invalid number of capture groups");
+            }
+            core.setOutput("tag", tagName);
+            core.setOutput("project", m[1]);
+            core.setOutput("version", m[2]);
+  release:
+    needs: set-env
+    # if: github.event.pull_request.merged == true && contains(github.event.pull_request.head.ref, 'release/')
+    if: contains(github.event.pull_request.head.ref, 'release/')
+    uses: ./.github/workflows/shared-release.yml
+    with:
+      branch: ${{ github.head_ref }}
+      tag: ${{ needs.set-env.outputs.tag }}
+      version: ${{ needs.set-env.outputs.version }}
+      target-commitish: ${{ github.sha }}
+      changelog-file: ${{ needs.set-env.outputs.project }}/CHANGELOG.md
+      files-from-workflow: CI
+      files: ${{ needs.set-env.outputs.project }}/**
+    secrets: inherit

@@ -1,0 +1,94 @@
+name: Pre Release
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        type: choice
+        description: Select one of softin-shared tools to release
+        required: true
+        options:
+          - http-mock
+          - jiraprocs
+          - libappbuilder
+          - libapplauncher
+          - liblicensing-legacy
+          - libsupervisord
+          - libutils
+          - libzaputils
+          - octopus
+      version:
+        description: Release version in semver format (no leading "v")
+        type: string
+        required: true
+      test:
+        description: Flag to identify whether to execute workflow in the test mode.
+        type: boolean
+        default: false
+
+env:
+  PROJECTS: |
+    {
+      'http-mock': {
+        'version-file': 'src/cmd/http-mock/main.go',
+        'version-pattern': 'Version\\\\s*:\\\\s*"(.*)"',
+      },
+      'jiraprocs': {
+        'version-file': 'main.go',
+        'version-pattern': 'Version\\\\s*:\\\\s*"(.*)"',
+      },
+      'libappbuilder': {
+        'version-file': 'VERSION',
+        'version-pattern': '(.*)',
+      },
+      'libapplauncher': {
+        'version-file': 'VERSION',
+        'version-pattern': '(.*)',
+      },
+      'libutils': {
+        'version-file': 'VERSION',
+        'version-pattern': '(.*)',
+      },
+      'libzaputils': {
+        'version-file': 'VERSION',
+        'version-pattern': '(.*)',
+      },
+      'liblicensing-legacy': {
+        'version-file': 'pkg/version/version.go',
+        'version-pattern': 'VersionStr\\\\s*=\\\\s*"(.*)"',
+      },
+      'libsupervisord': {
+        'version-file': 'VERSION',
+        'version-pattern': '(.*)',
+      },
+      'octopus': {
+        'version-file': 'src/ci-launcher/main.go',
+        'version-pattern': 'Version\\\\s*:\\\\s*"(.*)"',
+      },
+    }
+
+jobs:
+  # Must use this trick of passing env variable to a job via previous job output because env context is
+  # not available within job definition scope:
+  # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+  set-env:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      projects: ${{ steps.step1.outputs.projects }}
+    steps:
+      - uses: actions/github-script@v6
+        id: step1
+        with:
+          script: |
+            core.setOutput("projects", `${{ env.PROJECTS }}`);
+  pre-release:
+    needs: set-env
+    uses: ./.github/workflows/shared-pre-release.yml
+    with:
+      version: ${{ inputs.version }}
+      version-prefix: ${{ inputs.tool }}/v
+      version-file: ${{ inputs.tool }}/${{ fromJson(needs.set-env.outputs.projects)[inputs.tool]['version-file'] }}
+      version-pattern: ${{ fromJson(needs.set-env.outputs.projects)[inputs.tool]['version-pattern'] }}
+      changelog-file: ${{ inputs.tool }}/CHANGELOG.md
+      test: ${{ inputs.test }}
+    secrets: inherit
