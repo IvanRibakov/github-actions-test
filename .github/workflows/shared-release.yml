@@ -39,7 +39,7 @@ jobs:
       - name: Check if tag already exists
         run: |
           git fetch --tags origin
-          git show-ref --tags --quiet --verify -- refs/tags/${{ inputs.tag }}
+          ! git show-ref --tags --quiet --verify -- refs/tags/${{ inputs.tag }}
 
   extract-release-notes:
     needs: safety-checks
